@@ -8,22 +8,23 @@ const chokidar = require("chokidar");
 const app = express();
 const PORT = 5454;
 const IMAGE_DIR = "./images";
-const N = 15;
+const N = 10;
 
 function getNextImage(imageList, weigths) {
-  const weigthSum = imageList
-    .map((img) => 1 / (1 + weigths[img]))
-    .reduce((prev, cur) => prev + cur, 0);
+  // Die Formel kann angepasst werden, um neue oder ältere Bilder stärker zu bestrafen/zu belohnen
+  const transformedWeigths = imageList.map(
+    (img) => 1 / (1 + weigths[img]) ** 2
+  );
+  const weigthSum = transformedWeigths.reduce((prev, cur) => prev + cur, 0);
   const randomVal = Math.random() * weigthSum;
-
-  console.log(weigths);
 
   let cummulatedSum = 0;
 
   for (let i in imageList) {
-    cummulatedSum += 1 / weigths[imageList[i]];
+    cummulatedSum += transformedWeigths[i];
 
     if (randomVal < cummulatedSum) {
+      weigths[imageList[i]]++;
       return imageList[i];
     }
   }
@@ -69,18 +70,17 @@ async function main() {
     }
   });
 
-  // watch(IMAGE_DIR, (eventType, filename) => {
-  //   console.log("\nThe file", filename, "was modified!");
-  //   console.log("The type of change was:", eventType);
-  // });
-
   const imageSelection = [];
+  let i = 0;
 
-  for (let i = 0; i < N; i++) {
+  while (i < N) {
     const nextImage = await getNextImage(images, weigths);
-    imageSelection.push(nextImage);
-    weigths[nextImage]++;
-    // console.log(imageSelection);
+
+    if (!imageSelection.includes(nextImage)) {
+      imageSelection.push(nextImage);
+      weigths[nextImage]++;
+      i++;
+    }
   }
 
   app.listen(PORT, () => console.log(`server listening on port ${PORT}`));
@@ -92,7 +92,13 @@ async function main() {
       image: nextImage,
     });
 
-    imageSelection.push(await getNextImage(images, weigths));
+    let newWaiting = await getNextImage(images, weigths);
+
+    while (imageSelection.includes(newWaiting)) {
+      newWaiting = await getNextImage(images, weigths);
+    }
+
+    imageSelection.push(newWaiting);
   });
 
   app.use("/image/", express.static(IMAGE_DIR));

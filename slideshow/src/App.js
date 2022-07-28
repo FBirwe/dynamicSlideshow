@@ -21,6 +21,7 @@ function App() {
   }
 
   const [images, setImages] = useState(initialImagesArray);
+  const [zIndex, setZIndex] = useState(initialImagesArray.map((el, i) => i));
 
   const resetIndex = (i) => {
     setImages((val) => {
@@ -34,6 +35,12 @@ function App() {
 
       setImages((val) => {
         val[i] = nextImage;
+
+        return [...val];
+      });
+
+      setZIndex((val) => {
+        val[i] = zIndex.reduce((prev, cur) => (prev > cur ? prev : cur), 0) + 1;
 
         return [...val];
       });
@@ -78,7 +85,11 @@ function App() {
         {images.map((el, i) =>
           el ? (
             <div className="flex_container">
-              <Image img={el} onDisable={() => resetIndex(i)}></Image>
+              <Image
+                img={el}
+                z={zIndex[i]}
+                onDisable={() => resetIndex(i)}
+              ></Image>
             </div>
           ) : (
             <div className="flex_container" />
@@ -93,7 +104,7 @@ function Image(props) {
   const ROTATION_RANGE = 0;
   const [x, setX] = useState(0);
   const [y, setY] = useState(0);
-  const [z, setZ] = useState(0);
+  // const [z, setZ] = useState(0);
   const [rotation, setRotation] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -110,7 +121,7 @@ function Image(props) {
     setY(
       Math.random() * (parentElement.offsetHeight - currentElement.offsetHeight)
     );
-    setZ(Math.floor(Math.random() * 25));
+    // setZ(Math.floor(Math.random() * 25));
     setRotation(
       Math.floor(Math.random() * ROTATION_RANGE * 2) - ROTATION_RANGE
     );
@@ -124,13 +135,15 @@ function Image(props) {
     }, IMAGE_DURATION * 1000);
   };
 
+  console.log(props.z);
+
   return (
     <div
       className={`image_preview ${isVisible ? "visible" : null}`}
       style={{
         left: x,
         top: y,
-        zIndex: z,
+        zIndex: props.z,
         transform: `rotate(${rotation}deg)`,
       }}
     >
