@@ -33,11 +33,37 @@
   opacity: 100;
 }
 
+.image_preview.portrait {
+  height: 110%;
+}
+
+.image_preview.landscape {
+  width: 110%;
+}
+
 .image_preview img {
   width: auto;
   height: auto;
 
-  max-width: 120%;
-  max-height: 120%;
+  max-width: 110%;
+  max-height: 110%;
   box-shadow: 2px 2px 2px 1px rgba(0, 0, 0, 0.2);
+}
+
+.image_preview .imageNameLine {
+  padding: 10px;
+  background-color: rgba(50,50,50,0.5);
+
+  position: absolute;
+  bottom: 0;
+  right: 0;
+}
+
+.dev_panel {
+  position: fixed;
+  right: 50px;
+  bottom: 50px;
+  z-index: 100000;
+
+  background-color: rgba(200,200,200,0.4);
 }

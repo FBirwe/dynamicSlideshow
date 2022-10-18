@@ -128,3 +128,11 @@ dist
 
 # mac structure files
 .DS_Store
+
+# anders
+/server/images
+/server/images_prod
+
+/weigths.json
+
+.ipynb_checkpoints

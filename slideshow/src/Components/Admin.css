@@ -1,0 +1,28 @@
+/* body {
+    background-color: #111;
+    color: #aaa;
+} */
+
+li {
+    list-style: none;
+}
+
+div.imageLine {
+    display: flex;
+    padding: 5px;
+    border-bottom: 1px solid #777;
+}
+
+li:first-child  div.imageLine{
+    border-top: 1px solid #777;
+}
+
+div.imageContainer {
+    width: 50px;
+    height: 50px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+
+    margin-right: 15px;
+}

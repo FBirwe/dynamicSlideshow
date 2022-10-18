@@ -1,9 +1,11 @@
 import "./App.css";
-import { useRef, useEffect, useState } from "react";
-import { getNextImageName } from "./model";
-const IMAGE_DURATION = 30;
-const DELAY = 10;
-const IMAGE_COUNT = 6;
+import { useEffect, useState } from "react";
+import { getNextImageName, BASE_URL } from "./model";
+import {
+  useGetImageDurationQuery,
+  useGetDelayQuery,
+  useGetImageParallelCountQuery,
+} from "./ReduxReducers/configApi";
 
 function wait(seconds) {
   return new Promise((res, rej) => {
@@ -13,15 +15,75 @@ function wait(seconds) {
   });
 }
 
-function App() {
+function App(props) {
+  const imageDurationQuery = useGetImageDurationQuery();
+  const delayQuery = useGetDelayQuery();
+  const imageParallelCountQuery = useGetImageParallelCountQuery();
+
+  const delay =
+    delayQuery.isError || delayQuery.isLoading ? 10 : delayQuery.data.value;
+
+  const imageParallelCount =
+    imageParallelCountQuery.isError || imageParallelCountQuery.isLoading
+      ? 5
+      : imageParallelCountQuery.data.value;
+
+  // useEffect(() => {
+  //   setInterval(() => {
+  //     console.log("refetch");
+  //     imageDurationQuery.refetch();
+  //     delayQuery.refetch();
+  //     imageParallelCountQuery.refetch();
+  //   }, 10 * 1000);
+  // }, []);
+
   const initialImagesArray = [];
 
-  for (let i = 0; i < IMAGE_COUNT; i++) {
+  for (let i = 0; i < imageParallelCount; i++) {
     initialImagesArray.push(null);
   }
 
   const [images, setImages] = useState(initialImagesArray);
   const [zIndex, setZIndex] = useState(initialImagesArray.map((el, i) => i));
+
+  useEffect(() => {
+    if (images.length !== imageParallelCount) {
+      (async () => {
+        // Da die Funktion setImages nicht asynchron sein darf, muss dieser Fall
+        // im Vorhinein bearbeitet werden
+        const nextImages = [];
+        if (images.length < imageParallelCount) {
+          for (let i = images.length; i < imageParallelCount; i++) {
+            nextImages.push(await getNextImageName());
+          }
+        }
+
+        setImages((val) => {
+          const newImages = [...val];
+
+          let containsNull = true;
+          while (imageParallelCount < newImages.length && containsNull) {
+            for (let j = 0; j < newImages.length; j++) {
+              if (j === newImages.length - 1) {
+                containsNull = false;
+              }
+
+              if (newImages[j] == null) {
+                newImages.splice(j, 1);
+                break;
+              }
+            }
+          }
+
+          for (let img of nextImages) {
+            newImages.push(img);
+          }
+
+          return newImages;
+        });
+      })();
+    }
+  }, [imageParallelCount]);
 
   const resetIndex = (i) => {
     setImages((val) => {
@@ -44,19 +106,30 @@ function App() {
 
         return [...val];
       });
-    }, DELAY * 1000);
+    }, delay * 1000);
   };
 
   useEffect(() => {
     const initImages = async () => {
-      for (let i in images) {
+      // Die Kacheln werden zu Beginn geshufflet
+
+      const usedIdx = [];
+
+      while (usedIdx.length < images.length) {
+        let i = Math.floor(Math.random() * images.length);
+
+        while (usedIdx.includes(i)) {
+          i = Math.floor(Math.random() * images.length);
+        }
+        usedIdx.push(i);
+
         const nextImage = await getNextImageName();
         setImages((val) => {
           val[i] = nextImage;
 
           return [...val];
         });
-        await wait(DELAY);
+        await wait(delay);
       }
     };
 
@@ -65,6 +138,7 @@ function App() {
 
   const rowCount = Math.round(Math.sqrt(images.length));
   const columnCount = Math.ceil(images.length / rowCount);
+  const devPanel = props.dev ? <DevPanel></DevPanel> : null;
 
   return (
     <div className="App">
@@ -87,6 +161,7 @@ function App() {
             <div className="flex_container">
               <Image
                 img={el}
+                dev={props.dev}
                 z={zIndex[i]}
                 onDisable={() => resetIndex(i)}
               ></Image>
@@ -96,14 +171,22 @@ function App() {
           )
         )}
       </div>
+      {devPanel}
     </div>
   );
 }
 
 function Image(props) {
+  const imageDurationQuery = useGetImageDurationQuery();
+  const imageDuration =
+    imageDurationQuery.isError || imageDurationQuery.isLoading
+      ? 10
+      : imageDurationQuery.data.value;
+
   const ROTATION_RANGE = 0;
   const [x, setX] = useState(0);
   const [y, setY] = useState(0);
+  const [isPortrait, setIsPortrait] = useState(true);
   // const [z, setZ] = useState(0);
   const [rotation, setRotation] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
@@ -111,9 +194,7 @@ function Image(props) {
   const onLoad = (ev) => {
     const currentElement = ev.target.parentElement;
     const parentElement = currentElement.parentElement;
-
-    console.log(currentElement.offsetWidth, parentElement.offsetWidth);
-    console.log((parentElement.offsetWidth - currentElement.offsetWidth) * 1);
+    setIsPortrait(ev.target.offsetWidth <= ev.target.offsetHeight);
 
     setX(
       Math.random() * (parentElement.offsetWidth - currentElement.offsetWidth)
@@ -121,7 +202,6 @@ function Image(props) {
     setY(
       Math.random() * (parentElement.offsetHeight - currentElement.offsetHeight)
     );
-    // setZ(Math.floor(Math.random() * 25));
     setRotation(
       Math.floor(Math.random() * ROTATION_RANGE * 2) - ROTATION_RANGE
     );
@@ -132,14 +212,21 @@ function Image(props) {
       setTimeout(() => {
         props.onDisable();
       }, 1000);
-    }, IMAGE_DURATION * 1000);
+    }, imageDuration * 1000);
   };
 
-  console.log(props.z);
+  const classNames = [
+    "image_preview",
+    isVisible ? "visible" : null,
+    isPortrait ? "portrait" : "landscape",
+  ];
+  const nameLine = props.dev ? (
+    <p className="imageNameLine">{props.img}</p>
+  ) : null;
 
   return (
     <div
-      className={`image_preview ${isVisible ? "visible" : null}`}
+      className={classNames.join(" ")}
       style={{
         left: x,
         top: y,
@@ -148,10 +235,45 @@ function Image(props) {
       }}
     >
       <img
-        src={`http://localhost:5454/image/${props.img}`}
+        src={`${BASE_URL}/api/v1/image/${props.img}`}
         onLoad={onLoad}
         alt=""
       ></img>
+      {nameLine}
+    </div>
+  );
+}
+
+function DevPanel() {
+  const imageDurationQuery = useGetImageDurationQuery();
+  const delayQuery = useGetDelayQuery();
+  const imageParallelCountQuery = useGetImageParallelCountQuery();
+
+  const imageDuration =
+    imageDurationQuery.isError || imageDurationQuery.isLoading
+      ? 10
+      : imageDurationQuery.data.value;
+
+  const delay =
+    delayQuery.isError || delayQuery.isLoading ? 10 : delayQuery.data.value;
+
+  const imageParallelCount =
+    imageParallelCountQuery.isError || imageParallelCountQuery.isLoading
+      ? 5
+      : imageParallelCountQuery.data.value;
+
+  const refetch = () => {
+    imageDurationQuery.refetch();
+    delayQuery.refetch();
+    imageParallelCountQuery.refetch();
+  };
+
+  return (
+    <div className="dev_panel">
+      <p>image duration {imageDuration}</p>
+      <p>delay {delay}</p>
+      <p>image parallel count {imageParallelCount}</p>
+      <button onClick={refetch}>Refetch</button>
     </div>
   );
 }
