@@ -133,6 +133,6 @@ dist
 /server/images
 /server/images_prod
 
-/weigths.json
+weightDb/weights.json
 
 .ipynb_checkpoints

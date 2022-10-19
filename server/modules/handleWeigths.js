@@ -21,6 +21,13 @@ async function getWeightDict(images) {
   return weigths;
 }
 
+/**
+ * Die Funktion erhoeht den Zaehler eines Bildes um eins.
+ * Dabei wird Das Bild neu im Dict angelegt, sollte es nicht
+ * vorhanden sein und die Gewichte werden abgelegt.
+ * @param {string : int} weigths
+ * @param {string} imageName
+ */
 async function increaseWeights(weigths, imageName) {
   if (!(imageName in weigths)) {
     weigths[imageName] = 0;

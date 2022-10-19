@@ -28,15 +28,6 @@ function App(props) {
       ? 5
       : imageParallelCountQuery.data.value;
 
-  // useEffect(() => {
-  //   setInterval(() => {
-  //     console.log("refetch");
-  //     imageDurationQuery.refetch();
-  //     delayQuery.refetch();
-  //     imageParallelCountQuery.refetch();
-  //   }, 10 * 1000);
-  // }, []);
-
   const initialImagesArray = [];
 
   for (let i = 0; i < imageParallelCount; i++) {
@@ -61,19 +52,21 @@ function App(props) {
         setImages((val) => {
           const newImages = [...val];
 
-          let containsNull = true;
-          while (imageParallelCount < newImages.length && containsNull) {
-            for (let j = 0; j < newImages.length; j++) {
-              if (j === newImages.length - 1) {
-                containsNull = false;
-              }
+          console.log(images.length, imageParallelCount);
 
-              if (newImages[j] == null) {
-                newImages.splice(j, 1);
-                break;
-              }
-            }
-          }
+          // let containsNull = true;
+          // while (imageParallelCount < newImages.length && containsNull) {
+          //   for (let j = 0; j < newImages.length; j++) {
+          //     if (j === newImages.length - 1) {
+          //       containsNull = false;
+          //     }
+
+          //     if (newImages[j] == null) {
+          //       newImages.splice(j, 1);
+          //       break;
+          //     }
+          //   }
+          // }
 
           for (let img of nextImages) {
             newImages.push(img);
@@ -88,6 +81,18 @@ function App(props) {
   const resetIndex = (i) => {
     setImages((val) => {
       val[i] = null;
+      console.log("inResetIndex", images.length, imageParallelCount);
+
+      // Wenn mehr Bilder vorhanden sind, als es sein soll,
+      // werden leere Kacheln entfernt
+      if (images.length > imageParallelCount) {
+        const newVal = [...val];
+        newVal.splice(i, 1);
+
+        console.log(newVal.length);
+
+        return newVal;
+      }
 
       return [...val];
     });
@@ -172,6 +177,7 @@ function App(props) {
         )}
       </div>
       {devPanel}
+      <ReloadComponent></ReloadComponent>
     </div>
   );
 }
@@ -276,6 +282,23 @@ function DevPanel() {
       <button onClick={refetch}>Refetch</button>
     </div>
   );
+}
+
+function ReloadComponent() {
+  const imageDurationQuery = useGetImageDurationQuery();
+  const delayQuery = useGetDelayQuery();
+  const imageParallelCountQuery = useGetImageParallelCountQuery();
+
+  useEffect(() => {
+    setInterval(() => {
+      console.log("refetch");
+      imageDurationQuery.refetch();
+      delayQuery.refetch();
+      imageParallelCountQuery.refetch();
+    }, 10 * 1000);
+  }, []);
+
+  return <></>;
 }
 
 export default App;
