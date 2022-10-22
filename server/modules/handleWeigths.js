@@ -14,8 +14,8 @@ const WEIGHT_DB_PATH = process.env.WEIGHT_DB_PATH;
 async function getWeightDict(images) {
   const weigths = await loadWeigths();
 
-  for (let image in images) {
-    weigths[image] = 0;
+  for (let imageName in images) {
+    weigths[images[imageName]] = 0;
   }
 
   return weigths;

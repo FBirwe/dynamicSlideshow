@@ -2,11 +2,12 @@ require("dotenv").config();
 
 const express = require("express");
 const fs = require("fs/promises");
-const { lstatSync } = require("fs");
+const { lstatSync, existsSync } = require("fs");
 const path = require("path");
 const cors = require("cors");
 const chokidar = require("chokidar");
 const { increaseWeights, getWeightDict } = require("./modules/handleWeigths");
+const { isImageBlocked } = require('./modules/handleBlocks'); 
 
 const app = express();
 const PORT = parseInt(process.env.PORT);
@@ -17,7 +18,7 @@ async function getNextImage(images, weigths) {
   const imageList = Object.keys(images);
   // Die Formel kann angepasst werden, um neue oder ältere Bilder stärker zu bestrafen/zu belohnen
   const transformedWeigths = imageList.map(
-    (img) => 1 / (1 + weigths[img]) ** 2
+    (img) => 1 / (1 + weigths[images[img]]) ** 2
   );
   const weigthSum = transformedWeigths.reduce((prev, cur) => prev + cur, 0);
   const randomVal = Math.random() * weigthSum;
@@ -28,8 +29,16 @@ async function getNextImage(images, weigths) {
     cummulatedSum += transformedWeigths[i];
 
     if (randomVal < cummulatedSum) {
-      await increaseWeights(weigths, imageList[i]);
-      return imageList[i];
+
+      // Fehlerbehebung, wenn das Bild nicht im System vorhanden ist
+      // Fehlerbehebung, wenn das Bild auf der Blocklist steht
+      const nextImagePath = images[imageList[i]]
+      if( existsSync(nextImagePath) && !(await isImageBlocked( nextImagePath ) ) ) {
+        await increaseWeights(weigths, nextImagePath);
+        return imageList[i];  
+      } else {
+        return await getNextImage( images, weigths );
+      }
     }
   }
 
@@ -38,9 +47,9 @@ async function getNextImage(images, weigths) {
   console.log(imageList.length, Object.keys(weigths).length);
 
   const randomIndex = Math.floor(Math.random() * imageList.length);
-  await increaseWeights(weigths, imageList[randomIndex]);
+  await increaseWeights(weigths, images[imageList[randomIndex]]);
 
-  return imageList[randomIndex];
+  return images[imageList[randomIndex]];
 }
 
 async function loadImages(imageDir, acceptedExtensions) {
@@ -50,7 +59,7 @@ async function loadImages(imageDir, acceptedExtensions) {
   for (let currentDir of imageDirs) {
     const foundImages = (await fs.readdir(currentDir)).filter((el) => {
       for (let aE of acceptedExtensions) {
-        const extensionRegex = new RegExp(`.+\.${aE}`);
+        const extensionRegex = new RegExp(`.+\.${aE}$`);
         if (el.match(extensionRegex)) {
           return true;
         }
@@ -60,7 +69,8 @@ async function loadImages(imageDir, acceptedExtensions) {
     });
 
     for (let foundImage of foundImages) {
-      images[foundImage] = path.resolve(currentDir, foundImage);
+      const imagePath  = path.resolve(currentDir, foundImage);
+      images[imagePath.replace(/\//g,'_')] = imagePath
     }
   }
 
@@ -90,8 +100,8 @@ async function updateImages(imageDir, weigths, acceptedExtensions) {
   // Wenn neue Bilder hinzugefügt werden,
   // wird auch das Weight-Dictionary weitergepflegt
   for (let img in images) {
-    if (!(img in weigths)) {
-      weigths[img] = 0;
+    if (!(images[img] in weigths)) {
+      weigths[images[img]] = 0;
     }
   }
 
@@ -113,7 +123,7 @@ async function main() {
 
   watcher.on("all", async (eventType, filepath, stats) => {
     images = await updateImages(IMAGE_DIR, weigths, acceptedExtensions);
-    console.log(`something has ${eventType}`, path.basename(filepath));
+    console.log(`image dir: ${eventType}`, path.basename(filepath));
   });
 
   const imageSelection = [];
@@ -152,6 +162,8 @@ async function main() {
 
   app.get("/api/v1/image/:imageName", (req, res, next) => {
     const { imageName } = req.params;
+    console.log( imageName )
+
     res.sendFile(images[imageName]);
   });
 
