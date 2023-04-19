@@ -159,6 +159,7 @@ async function main() {
   });
 
   app.use("/image/", express.static(IMAGE_DIR));
+  app.use("/", express.static( path.join('.','client','build')) )
 
   app.get("/api/v1/image/:imageName", (req, res, next) => {
     const { imageName } = req.params;

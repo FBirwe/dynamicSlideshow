@@ -1,4 +1,5 @@
-const BASE_URL = `http://${window.location.hostname}:5454`;
+// const BASE_URL = `http://${window.location.hostname}:5454`;
+const BASE_URL = '';
 
 async function getNextImageName() {
   const res = await fetch(`${BASE_URL}/api/v1/next`);
