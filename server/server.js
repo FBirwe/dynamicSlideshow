@@ -70,7 +70,7 @@ async function loadImages(imageDir, acceptedExtensions) {
 
     for (let foundImage of foundImages) {
       const imagePath  = path.resolve(currentDir, foundImage);
-      images[imagePath.replace(/\//g,'_')] = imagePath
+      images[imagePath.replaceAll(path.sep,'_')] = imagePath
     }
   }
 
@@ -129,7 +129,7 @@ async function main() {
   const imageSelection = [];
   let i = 0;
 
-  while (i < N) {
+  while (i < N && i < Object.keys(N).length) {
     const nextImage = await getNextImage(images, weigths);
 
     if (!imageSelection.includes(nextImage)) {
