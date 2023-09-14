@@ -17,7 +17,7 @@ async function loadBlockList() {
     try {
         const data = (await fs.readFile( BLOCK_DB_PATH, { encoding : 'utf8' } )).split('\n');
 
-        return data.map(el => el.trim());
+        return data.map(el => el.trim()).filter(el => el != '');
     } catch (error) {
         console.log(error)
         console.log("block db not found");

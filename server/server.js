@@ -33,6 +33,7 @@ async function getNextImage(images, weigths) {
       // Fehlerbehebung, wenn das Bild nicht im System vorhanden ist
       // Fehlerbehebung, wenn das Bild auf der Blocklist steht
       const nextImagePath = images[imageList[i]]
+
       if( existsSync(nextImagePath) && !(await isImageBlocked( nextImagePath ) ) ) {
         await increaseWeights(weigths, nextImagePath);
         return imageList[i];  
@@ -129,7 +130,9 @@ async function main() {
   const imageSelection = [];
   let i = 0;
 
-  while (i < N && i < Object.keys(N).length) {
+  console.log( i < N, i < Object.keys(images).length)
+
+  while (i < N && i < Object.keys(images).length) {
     const nextImage = await getNextImage(images, weigths);
 
     if (!imageSelection.includes(nextImage)) {
@@ -138,6 +141,8 @@ async function main() {
       i++;
     }
   }
+
+  console.log( imageSelection );
 
   app.listen(PORT, () => console.log(`server listening on port ${PORT}`));
   app.use(cors());
